@@ -1,12 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"github.com/fatih/color"
 	"math/rand"
 	"time"
 )
 
-var seatingCapacity = 10
+var seatingCapacity = 2
 var arriveRate = 100
 var cutDuration = 1000 * time.Millisecond
 var timeOpen = 10 * time.Second
@@ -32,6 +33,35 @@ func main() {
 	color.Green("The shop is open for the day!")
 
 	shop.addBarber("Frank")
+	shop.addBarber("Tomas")
+	shop.addBarber("Neal")
+	shop.addBarber("Alan")
+	shop.addBarber("Kelly")
 
-	time.Sleep(5 * time.Second)
+	shopClosing := make(chan bool)
+	closed := make(chan bool)
+
+	go func() {
+		<-time.After(timeOpen)
+		shopClosing <- true
+		shop.closeShopForDay()
+		closed <- true
+	}()
+
+	i := 1
+
+	go func() {
+		for {
+			randomMilliseconds := rand.Int() % (2 * arriveRate)
+			select {
+			case <-shopClosing:
+				return
+			case <-time.After(time.Duration(randomMilliseconds) * time.Millisecond):
+				shop.addClient(fmt.Sprintf("Client #%d", i))
+				i++
+			}
+		}
+	}()
+
+	<-closed
 }
